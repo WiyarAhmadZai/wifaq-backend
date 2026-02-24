@@ -14,20 +14,26 @@ class LeaveRequestController extends Controller
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
-            'school' => 'required|string|max:255',
-            'leave_type' => 'required|in:sick,casual,annual,emergency,other',
-            'from_date' => 'required|date',
-            'to_date' => 'required|date|after_or_equal:from_date',
-            'total_days' => 'required|integer|min:1',
-            'reason' => 'required|string',
-            'coverage_plan' => 'required|string',
-        ]);
+        try {
+            $validated = $request->validate([
+                'school' => 'required|string|max:255',
+                'leave_type' => 'required|in:sick,casual,annual,emergency,other',
+                'from_date' => 'required|date',
+                'to_date' => 'required|date|after_or_equal:from_date',
+                'total_days' => 'required|integer|min:1',
+                'reason' => 'required|string',
+                'coverage_plan' => 'required|string',
+            ]);
 
-        $validated['user_id'] = auth()->id();
-        $validated['status'] = 'pending';
+            $validated['user_id'] = auth()->id();
+            $validated['status'] = 'pending';
 
-        return LeaveRequest::create($validated);
+            return LeaveRequest::create($validated);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['message' => 'Validation failed', 'errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['message' => $e->getMessage()], 500);
+        }
     }
 
     public function show(LeaveRequest $leaveRequest)
