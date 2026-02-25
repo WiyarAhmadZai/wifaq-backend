@@ -11,7 +11,6 @@ class VisitorLog extends Model
     use HasFactory;
 
     protected $fillable = [
-        'date',
         'visitor_name',
         'purpose',
         'time_in',
@@ -22,7 +21,6 @@ class VisitorLog extends Model
     ];
 
     protected $casts = [
-        'date' => 'date',
         'time_in' => 'datetime:H:i',
         'time_out' => 'datetime:H:i',
     ];
