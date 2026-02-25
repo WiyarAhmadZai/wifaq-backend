@@ -11,19 +11,19 @@ class StaffTask extends Model
     use HasFactory;
 
     protected $fillable = [
-        'date',
         'staff_name',
         'task',
         'status',
-        'started',
-        'completed',
+        'started_at',
+        'completed_at',
         'quality',
         'notes',
         'assigned_by',
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'started_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     public function assigner(): BelongsTo
