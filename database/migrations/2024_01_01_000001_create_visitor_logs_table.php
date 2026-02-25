@@ -10,7 +10,6 @@ return new class extends Migration
     {
         Schema::create('visitor_logs', function (Blueprint $table) {
             $table->id();
-            $table->date('date');
             $table->string('visitor_name');
             $table->string('purpose');
             $table->time('time_in');
