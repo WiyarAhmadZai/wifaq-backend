@@ -15,17 +15,13 @@ class StaffTaskController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'date' => 'required|date',
             'staff_name' => 'required|string|max:255',
             'task' => 'required|string',
-            'status' => 'in:pending,in_progress,completed',
-            'started' => 'nullable',
-            'completed' => 'nullable',
-            'quality' => 'nullable|in:excellent,good,average,poor',
             'notes' => 'nullable|string',
         ]);
 
         $validated['assigned_by'] = auth()->id();
+        $validated['status'] = 'pending';
 
         return StaffTask::create($validated);
     }
@@ -38,18 +34,26 @@ class StaffTaskController extends Controller
     public function update(Request $request, StaffTask $staffTask)
     {
         $validated = $request->validate([
-            'date' => 'required|date',
             'staff_name' => 'required|string|max:255',
             'task' => 'required|string',
             'status' => 'in:pending,in_progress,completed',
-            'started' => 'nullable',
-            'completed' => 'nullable',
             'quality' => 'nullable|in:excellent,good,average,poor',
             'notes' => 'nullable|string',
         ]);
 
+        $oldStatus = $staffTask->status;
+        $newStatus = $validated['status'] ?? $oldStatus;
+
+        if ($oldStatus !== 'in_progress' && $newStatus === 'in_progress') {
+            $validated['started_at'] = now();
+        }
+
+        if ($oldStatus !== 'completed' && $newStatus === 'completed') {
+            $validated['completed_at'] = now();
+        }
+
         $staffTask->update($validated);
-        return $staffTask;
+        return $staffTask->load('assigner');
     }
 
     public function destroy(StaffTask $staffTask)
