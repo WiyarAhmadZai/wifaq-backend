@@ -10,12 +10,11 @@ return new class extends Migration
     {
         Schema::create('staff_tasks', function (Blueprint $table) {
             $table->id();
-            $table->date('date');
             $table->string('staff_name');
             $table->text('task');
             $table->enum('status', ['pending', 'in_progress', 'completed'])->default('pending');
-            $table->time('started')->nullable();
-            $table->time('completed')->nullable();
+            $table->timestamp('started_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
             $table->enum('quality', ['excellent', 'good', 'average', 'poor'])->nullable();
             $table->text('notes')->nullable();
             $table->foreignId('assigned_by')->constrained('users');
