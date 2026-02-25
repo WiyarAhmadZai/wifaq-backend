@@ -15,7 +15,6 @@ class VisitorLogController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'date' => 'required|date',
             'visitor_name' => 'required|string|max:255',
             'purpose' => 'required|string|max:255',
             'time_in' => 'required',
@@ -37,7 +36,6 @@ class VisitorLogController extends Controller
     public function update(Request $request, VisitorLog $visitorLog)
     {
         $validated = $request->validate([
-            'date' => 'required|date',
             'visitor_name' => 'required|string|max:255',
             'purpose' => 'required|string|max:255',
             'time_in' => 'required',
