@@ -38,7 +38,6 @@ class StaffContractController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'staff_id' => 'required|exists:staff,id',
-            'contract_number' => 'required|string|unique:staff_contracts,contract_number',
             'contract_type' => 'required|in:permanent,fixed_term,probation,consultancy,internship',
             'start_date' => 'required|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
@@ -56,7 +55,19 @@ class StaffContractController extends Controller
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
+        // Generate contract number automatically
+        $year = date('y'); // Last two digits of year
+        $lastContract = StaffContract::orderBy('id', 'desc')->first();
+        if ($lastContract && preg_match('/WEN-CT-(\d{2})-(\d{4})/', $lastContract->contract_number, $matches)) {
+            $lastSequence = intval($matches[2]);
+            $sequenceNumber = $lastSequence + 1;
+        } else {
+            $sequenceNumber = 1;
+        }
+        $contractNumber = sprintf('WEN-CT-%s-%04d', $year, $sequenceNumber);
+
         $data = $request->all();
+        $data['contract_number'] = $contractNumber;
         $data['created_by'] = auth()->id();
 
         if ($data['contract_type'] === 'probation' && isset($data['probation_period_days'])) {
@@ -90,7 +101,6 @@ class StaffContractController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'contract_number' => 'sometimes|string|unique:staff_contracts,contract_number,' . $id,
             'contract_type' => 'sometimes|in:permanent,fixed_term,probation,consultancy,internship',
             'start_date' => 'sometimes|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
