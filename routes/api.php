@@ -82,6 +82,16 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::delete('/{jobApplication}', [JobApplicationController::class, 'destroy'])->name('destroy');
         });
 
+        // Jobs routes
+        Route::prefix('jobs')->name('jobs.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\JobController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Api\JobController::class, 'store'])->name('store');
+            Route::get('/{job}', [\App\Http\Controllers\Api\JobController::class, 'show'])->name('show');
+            Route::put('/{job}', [\App\Http\Controllers\Api\JobController::class, 'update'])->name('update');
+            Route::put('/{job}/status', [\App\Http\Controllers\Api\JobController::class, 'updateStatus'])->name('update-status');
+            Route::delete('/{job}', [\App\Http\Controllers\Api\JobController::class, 'destroy'])->name('destroy');
+        });
+
         // Vendor routes
         Route::prefix('vendors')->name('vendors.')->group(function () {
             Route::get('/', [VendorController::class, 'index'])->name('index');
