@@ -3,75 +3,121 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
-use App\Http\Controllers\VisitorLogController;
+use App\Http\Controllers\Api\StaffController;
+use App\Http\Controllers\Api\StaffContractController;
 use App\Http\Controllers\AttendanceController;
-use App\Http\Controllers\PurchaseRequestController;
 use App\Http\Controllers\LeaveRequestController;
-use App\Http\Controllers\VendorController;
-use App\Http\Controllers\StaffTaskController;
-use App\Http\Controllers\PlannerController;
 use App\Http\Controllers\JobApplicationController;
+use App\Http\Controllers\PlannerController;
+use App\Http\Controllers\PurchaseRequestController;
+use App\Http\Controllers\StaffTaskController;
+use App\Http\Controllers\VendorController;
+use App\Http\Controllers\VisitorLogController;
 
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/user', function (Request $request) {
-        return $request->user();
-    });
+    Route::get('/user', [AuthController::class, 'me']);
     
     Route::post('/logout', [AuthController::class, 'logout']);
 
-    Route::prefix('hr')->group(function () {
-        Route::get('/visitor-logs', [VisitorLogController::class, 'index']);
-        Route::post('/visitor-logs', [VisitorLogController::class, 'store']);
-        Route::get('/visitor-logs/{visitorLog}', [VisitorLogController::class, 'show']);
-        Route::put('/visitor-logs/{visitorLog}', [VisitorLogController::class, 'update']);
-        Route::delete('/visitor-logs/{visitorLog}', [VisitorLogController::class, 'destroy']);
+    Route::prefix('hr')->name('hr.')->group(function () {
+       
+        Route::prefix('staff')->name('staff.')->group(function () {
+            Route::get('/list', [StaffController::class, 'index'])->name('list');
+            Route::post('/store', [StaffController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [StaffController::class, 'show'])->name('show');
+            Route::put('/update/{id}', [StaffController::class, 'update'])->name('update');
+            Route::delete('/delete/{id}', [StaffController::class, 'destroy'])->name('delete');
+            Route::get('/departments/list', [StaffController::class, 'departments'])->name('departments');
+            Route::get('/roles/list', [StaffController::class, 'roles'])->name('roles');
+        });
 
-        Route::get('/attendances', [AttendanceController::class, 'index']);
-        Route::post('/attendances', [AttendanceController::class, 'store']);
-        Route::get('/attendances/{attendance}', [AttendanceController::class, 'show']);
-        Route::put('/attendances/{attendance}', [AttendanceController::class, 'update']);
-        Route::delete('/attendances/{attendance}', [AttendanceController::class, 'destroy']);
-        Route::post('/attendances/check-in', [AttendanceController::class, 'checkIn']);
-        Route::post('/attendances/check-out', [AttendanceController::class, 'checkOut']);
+        Route::prefix('contracts')->name('contracts.')->group(function () {
+            Route::get('/list', [StaffContractController::class, 'index'])->name('list');
+            Route::post('/store', [StaffContractController::class, 'store'])->name('store');
+            Route::get('/show/{id}', [StaffContractController::class, 'show'])->name('show');
+            Route::put('/update/{id}', [StaffContractController::class, 'update'])->name('update');
+            Route::delete('/delete/{id}', [StaffContractController::class, 'destroy'])->name('delete');
+            Route::post('/approve/{id}', [StaffContractController::class, 'approve'])->name('approve');
+            Route::get('/expiring-soon/list', [StaffContractController::class, 'expiringSoon'])->name('expiring-soon');
+            Route::get('/types/list', [StaffContractController::class, 'contractTypes'])->name('types');
+        });
 
-        Route::get('/purchase-requests', [PurchaseRequestController::class, 'index']);
-        Route::post('/purchase-requests', [PurchaseRequestController::class, 'store']);
-        Route::get('/purchase-requests/{purchaseRequest}', [PurchaseRequestController::class, 'show']);
-        Route::put('/purchase-requests/{purchaseRequest}', [PurchaseRequestController::class, 'update']);
-        Route::delete('/purchase-requests/{purchaseRequest}', [PurchaseRequestController::class, 'destroy']);
+        // Attendance routes
+        Route::prefix('attendances')->name('attendances.')->group(function () {
+            Route::get('/', [AttendanceController::class, 'index'])->name('index');
+            Route::post('/', [AttendanceController::class, 'store'])->name('store');
+            Route::get('/{attendance}', [AttendanceController::class, 'show'])->name('show');
+            Route::put('/{attendance}', [AttendanceController::class, 'update'])->name('update');
+            Route::delete('/{attendance}', [AttendanceController::class, 'destroy'])->name('destroy');
+            Route::post('/check-in', [AttendanceController::class, 'checkIn'])->name('check-in');
+            Route::post('/check-out', [AttendanceController::class, 'checkOut'])->name('check-out');
+        });
 
-        Route::get('/leave-requests', [LeaveRequestController::class, 'index']);
-        Route::post('/leave-requests', [LeaveRequestController::class, 'store']);
-        Route::get('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'show']);
-        Route::put('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'update']);
-        Route::delete('/leave-requests/{leaveRequest}', [LeaveRequestController::class, 'destroy']);
+        // Leave request routes
+        Route::prefix('leave-requests')->name('leave-requests.')->group(function () {
+            Route::get('/', [LeaveRequestController::class, 'index'])->name('index');
+            Route::post('/', [LeaveRequestController::class, 'store'])->name('store');
+            Route::get('/{leaveRequest}', [LeaveRequestController::class, 'show'])->name('show');
+            Route::put('/{leaveRequest}', [LeaveRequestController::class, 'update'])->name('update');
+            Route::delete('/{leaveRequest}', [LeaveRequestController::class, 'destroy'])->name('destroy');
+        });
 
-        Route::get('/vendors', [VendorController::class, 'index']);
-        Route::post('/vendors', [VendorController::class, 'store']);
-        Route::get('/vendors/{vendor}', [VendorController::class, 'show']);
-        Route::put('/vendors/{vendor}', [VendorController::class, 'update']);
-        Route::delete('/vendors/{vendor}', [VendorController::class, 'destroy']);
+        // Job application routes
+        Route::prefix('job-applications')->name('job-applications.')->group(function () {
+            Route::get('/', [JobApplicationController::class, 'index'])->name('index');
+            Route::post('/', [JobApplicationController::class, 'store'])->name('store');
+            Route::get('/{jobApplication}', [JobApplicationController::class, 'show'])->name('show');
+            Route::put('/{jobApplication}', [JobApplicationController::class, 'update'])->name('update');
+            Route::delete('/{jobApplication}', [JobApplicationController::class, 'destroy'])->name('destroy');
+        });
 
-        Route::get('/staff-tasks', [StaffTaskController::class, 'index']);
-        Route::post('/staff-tasks', [StaffTaskController::class, 'store']);
-        Route::get('/staff-tasks/{staffTask}', [StaffTaskController::class, 'show']);
-        Route::put('/staff-tasks/{staffTask}', [StaffTaskController::class, 'update']);
-        Route::delete('/staff-tasks/{staffTask}', [StaffTaskController::class, 'destroy']);
+        // Vendor routes
+        Route::prefix('vendors')->name('vendors.')->group(function () {
+            Route::get('/', [VendorController::class, 'index'])->name('index');
+            Route::post('/', [VendorController::class, 'store'])->name('store');
+            Route::get('/{vendor}', [VendorController::class, 'show'])->name('show');
+            Route::put('/{vendor}', [VendorController::class, 'update'])->name('update');
+            Route::delete('/{vendor}', [VendorController::class, 'destroy'])->name('destroy');
+        });
 
-        Route::get('/planners', [PlannerController::class, 'index']);
-        Route::post('/planners', [PlannerController::class, 'store']);
-        Route::get('/planners/{planner}', [PlannerController::class, 'show']);
-        Route::put('/planners/{planner}', [PlannerController::class, 'update']);
-        Route::delete('/planners/{planner}', [PlannerController::class, 'destroy']);
+        // Purchase request routes
+        Route::prefix('purchase-requests')->name('purchase-requests.')->group(function () {
+            Route::get('/', [PurchaseRequestController::class, 'index'])->name('index');
+            Route::post('/', [PurchaseRequestController::class, 'store'])->name('store');
+            Route::get('/{purchaseRequest}', [PurchaseRequestController::class, 'show'])->name('show');
+            Route::put('/{purchaseRequest}', [PurchaseRequestController::class, 'update'])->name('update');
+            Route::delete('/{purchaseRequest}', [PurchaseRequestController::class, 'destroy'])->name('destroy');
+        });
 
-        Route::get('/job-applications', [JobApplicationController::class, 'index']);
-        Route::post('/job-applications', [JobApplicationController::class, 'store']);
-        Route::get('/job-applications/{jobApplication}', [JobApplicationController::class, 'show']);
-        Route::put('/job-applications/{jobApplication}', [JobApplicationController::class, 'update']);
-        Route::delete('/job-applications/{jobApplication}', [JobApplicationController::class, 'destroy']);
+        // Staff task routes
+        Route::prefix('staff-tasks')->name('staff-tasks.')->group(function () {
+            Route::get('/', [StaffTaskController::class, 'index'])->name('index');
+            Route::post('/', [StaffTaskController::class, 'store'])->name('store');
+            Route::get('/{staffTask}', [StaffTaskController::class, 'show'])->name('show');
+            Route::put('/{staffTask}', [StaffTaskController::class, 'update'])->name('update');
+            Route::delete('/{staffTask}', [StaffTaskController::class, 'destroy'])->name('destroy');
+        });
+
+        // Planner routes
+        Route::prefix('planners')->name('planners.')->group(function () {
+            Route::get('/', [PlannerController::class, 'index'])->name('index');
+            Route::post('/', [PlannerController::class, 'store'])->name('store');
+            Route::get('/{planner}', [PlannerController::class, 'show'])->name('show');
+            Route::put('/{planner}', [PlannerController::class, 'update'])->name('update');
+            Route::delete('/{planner}', [PlannerController::class, 'destroy'])->name('destroy');
+        });
+
+        // Visitor log routes
+        Route::prefix('visitor-logs')->name('visitor-logs.')->group(function () {
+            Route::get('/', [VisitorLogController::class, 'index'])->name('index');
+            Route::post('/', [VisitorLogController::class, 'store'])->name('store');
+            Route::get('/{visitorLog}', [VisitorLogController::class, 'show'])->name('show');
+            Route::put('/{visitorLog}', [VisitorLogController::class, 'update'])->name('update');
+            Route::delete('/{visitorLog}', [VisitorLogController::class, 'destroy'])->name('destroy');
+        });
     });
 });
 
