@@ -12,7 +12,7 @@ class StaffController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Staff::with(['supervisor', 'activeContract', 'creator', 'updater']);
+        $query = Staff::with(['activeContract', 'creator', 'updater']);
 
         if ($request->has('status')) {
             $query->where('status', $request->status);
@@ -42,8 +42,7 @@ class StaffController extends Controller
 
     public function store(Request $request)
     {
-        // Generate employee ID automatically
-        $year = date('y'); // Last two digits of year
+        $year = date('y');
         $lastStaff = Staff::orderBy('id', 'desc')->first();
         if ($lastStaff) {
             $lastSequence = intval(substr($lastStaff->employee_id, -4));
@@ -80,7 +79,7 @@ class StaffController extends Controller
 
     public function show($id)
     {
-        $staff = Staff::with(['supervisor', 'subordinates', 'contracts', 'activeContract', 'creator', 'updater'])->find($id);
+        $staff = Staff::with(['contracts', 'activeContract', 'creator', 'updater'])->find($id);
 
         if (!$staff) {
             return response()->json(['message' => 'Staff not found'], 404);
