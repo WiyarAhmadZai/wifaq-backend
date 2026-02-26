@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/store', [StaffContractController::class, 'store'])->name('store');
             Route::get('/show/{id}', [StaffContractController::class, 'show'])->name('show');
             Route::put('/update/{id}', [StaffContractController::class, 'update'])->name('update');
+            Route::put('/update-status/{id}', [StaffContractController::class, 'updateStatus'])->name('update-status');
             Route::delete('/delete/{id}', [StaffContractController::class, 'destroy'])->name('delete');
             Route::post('/approve/{id}', [StaffContractController::class, 'approve'])->name('approve');
             Route::get('/expiring-soon/list', [StaffContractController::class, 'expiringSoon'])->name('expiring-soon');
