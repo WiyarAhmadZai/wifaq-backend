@@ -11,51 +11,35 @@ class StaffSeeder extends Seeder
     public function run(): void
     {
         Staff::create([
-            'employee_id' => 'EMP001',
+            'employee_id' => 'WEN-26-0001',
             'full_name' => 'System Administrator',
-            'email' => 'admin@wifaq.edu',
-            'phone' => '+93 700 000 001',
-            'password' => Hash::make('password'),
-            'gender' => 'male',
-            'role' => 'super_admin',
             'department' => 'admin',
-            'designation' => 'System Administrator',
-            'hire_date' => '2024-01-01',
-            'employment_type' => 'full_time',
+            'employment_type' => 'WS',
             'status' => 'active',
             'base_salary' => 100000,
+            'required_time' => '09:00',
+            'track_attendance' => true,
         ]);
 
         Staff::create([
-            'employee_id' => 'EMP002',
+            'employee_id' => 'WEN-26-0002',
             'full_name' => 'HR Manager',
-            'email' => 'hr@wifaq.edu',
-            'phone' => '+93 700 000 002',
-            'password' => Hash::make('password'),
-            'gender' => 'female',
-            'role' => 'hr_manager',
             'department' => 'hr',
-            'designation' => 'HR Manager',
-            'hire_date' => '2024-01-01',
-            'employment_type' => 'full_time',
+            'employment_type' => 'WS',
             'status' => 'active',
             'base_salary' => 80000,
+            'required_time' => '09:00',
+            'track_attendance' => true,
         ]);
 
         Staff::create([
-            'employee_id' => 'EMP003',
+            'employee_id' => 'WEN-26-0003',
             'full_name' => 'Supervisor',
-            'email' => 'supervisor@wifaq.edu',
-            'phone' => '+93 700 000 003',
-            'password' => Hash::make('password'),
-            'gender' => 'male',
-            'role' => 'supervisor',
             'department' => 'academic',
-            'designation' => 'Academic Supervisor',
-            'hire_date' => '2024-01-01',
-            'employment_type' => 'full_time',
+            'employment_type' => 'WLS-CT',
             'status' => 'active',
-            'base_salary' => 70000,
+            'total_classes' => 20,
+            'rate_per_class' => 500,
         ]);
     }
 }
