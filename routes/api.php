@@ -17,6 +17,13 @@ use App\Http\Controllers\VisitorLogController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+// Public routes for testing
+Route::prefix('hr')->name('hr.')->group(function () {
+    Route::prefix('staff')->name('staff.')->group(function () {
+        Route::get('/list', [StaffController::class, 'index'])->name('list');
+    });
+});
+
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
     
@@ -25,7 +32,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('hr')->name('hr.')->group(function () {
        
         Route::prefix('staff')->name('staff.')->group(function () {
-            Route::get('/list', [StaffController::class, 'index'])->name('list');
             Route::post('/store', [StaffController::class, 'store'])->name('store');
             Route::get('/show/{id}', [StaffController::class, 'show'])->name('show');
             Route::put('/update/{id}', [StaffController::class, 'update'])->name('update');
