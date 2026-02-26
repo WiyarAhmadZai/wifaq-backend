@@ -14,6 +14,7 @@ class StaffController extends Controller
     {
         $query = Staff::with(['activeContract', 'creator', 'updater']);
 
+        // Apply filters
         if ($request->has('status')) {
             $query->where('status', $request->status);
         }
@@ -26,6 +27,7 @@ class StaffController extends Controller
             $query->where('employment_type', $request->employment_type);
         }
 
+        // Apply search
         if ($request->has('search')) {
             $search = $request->search;
             $query->where(function ($q) use ($search) {
@@ -50,7 +52,7 @@ class StaffController extends Controller
         } else {
             $sequenceNumber = 1;
         }
-        $employeeId = sprintf('WEN-%s-%04d', $year, $sequenceNumber);
+        $employeeId = sprintf('WEN-SF-%s-%04d', $year, $sequenceNumber);
 
         $validator = Validator::make($request->all(), [
             'full_name' => 'required|string|max:255',
