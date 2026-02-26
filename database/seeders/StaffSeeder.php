@@ -11,7 +11,7 @@ class StaffSeeder extends Seeder
     public function run(): void
     {
         Staff::create([
-            'employee_id' => 'WEN-26-0001',
+            'employee_id' => 'WEN-SF-26-0001',
             'full_name' => 'System Administrator',
             'department' => 'admin',
             'employment_type' => 'WS',
@@ -22,7 +22,7 @@ class StaffSeeder extends Seeder
         ]);
 
         Staff::create([
-            'employee_id' => 'WEN-26-0002',
+            'employee_id' => 'WEN-SF-26-0002',
             'full_name' => 'HR Manager',
             'department' => 'hr',
             'employment_type' => 'WS',
@@ -33,7 +33,7 @@ class StaffSeeder extends Seeder
         ]);
 
         Staff::create([
-            'employee_id' => 'WEN-26-0003',
+            'employee_id' => 'WEN-SF-26-0003',
             'full_name' => 'Supervisor',
             'department' => 'academic',
             'employment_type' => 'WLS-CT',
