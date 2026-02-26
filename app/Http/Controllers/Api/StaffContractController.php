@@ -144,6 +144,30 @@ class StaffContractController extends Controller
         return response()->json(['message' => 'Contract deleted successfully']);
     }
 
+    public function updateStatus(Request $request, $id)
+    {
+        $contract = StaffContract::find($id);
+
+        if (!$contract) {
+            return response()->json(['message' => 'Contract not found'], 404);
+        }
+
+        $validator = Validator::make($request->all(), [
+            'status' => 'required|in:draft,active,expired,terminated,renewed',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $contract->update([
+            'status' => $request->status,
+            'updated_by' => auth()->id()
+        ]);
+
+        return response()->json($contract->load(['staff', 'creator', 'approver']));
+    }
+
     public function approve(Request $request, $id)
     {
         $contract = StaffContract::find($id);
