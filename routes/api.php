@@ -29,6 +29,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/store', [StaffController::class, 'store'])->name('store');
             Route::get('/show/{id}', [StaffController::class, 'show'])->name('show');
             Route::put('/update/{id}', [StaffController::class, 'update'])->name('update');
+            Route::put('/update-status/{id}', [StaffController::class, 'updateStatus'])->name('update-status');
             Route::delete('/delete/{id}', [StaffController::class, 'destroy'])->name('delete');
             Route::get('/departments/list', [StaffController::class, 'departments'])->name('departments');
             Route::get('/roles/list', [StaffController::class, 'roles'])->name('roles');
