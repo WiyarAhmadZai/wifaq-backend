@@ -11,8 +11,7 @@ class LeaveRequest extends Model
     use HasFactory;
 
     protected $fillable = [
-        'user_id',
-        'school',
+        'staff_id',
         'leave_type',
         'from_date',
         'to_date',
@@ -27,8 +26,8 @@ class LeaveRequest extends Model
         'to_date' => 'date',
     ];
 
-    public function user(): BelongsTo
+    public function staff(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(\App\Models\Staff::class);
     }
 }
