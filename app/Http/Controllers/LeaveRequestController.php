@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LeaveRequest;
+use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -11,8 +12,8 @@ class LeaveRequestController extends Controller
     public function index()
     {
         try {
-            Log::info('Fetching leave requests', ['user_id' => auth()->id()]);
-            $data = LeaveRequest::with('user')->latest()->get();
+            Log::info('Fetching leave requests');
+            $data = LeaveRequest::with('staff')->latest()->get();
             Log::info('Leave requests fetched successfully', ['count' => $data->count()]);
             return response()->json($data);
         } catch (\Exception $e) {
@@ -33,16 +34,15 @@ class LeaveRequestController extends Controller
             Log::info('Creating leave request', $request->all());
             
             $validated = $request->validate([
-                'school' => 'required|string|max:255',
+                'staff_id' => 'required|exists:staff,id',
                 'leave_type' => 'required|in:sick,casual,annual,emergency,other',
                 'from_date' => 'required|date',
-                'to_date' => 'required|date|after_or_equal:from_date',
+                'to_date' => 'nullable|date|after_or_equal:from_date',
                 'total_days' => 'required|integer|min:1',
                 'reason' => 'required|string',
                 'coverage_plan' => 'required|string',
             ]);
 
-            $validated['user_id'] = auth()->id();
             $validated['status'] = 'pending';
 
             $leaveRequest = LeaveRequest::create($validated);
@@ -65,7 +65,7 @@ class LeaveRequestController extends Controller
     {
         try {
             Log::info('Showing leave request', ['id' => $leaveRequest->id]);
-            return response()->json($leaveRequest->load('user'));
+            return response()->json($leaveRequest->load('staff'));
         } catch (\Exception $e) {
             Log::error('Error showing leave request', ['message' => $e->getMessage()]);
             return response()->json(['message' => 'Failed to fetch leave request', 'error' => $e->getMessage()], 500);
@@ -78,10 +78,10 @@ class LeaveRequestController extends Controller
             Log::info('Updating leave request', ['id' => $leaveRequest->id, 'data' => $request->all()]);
             
             $validated = $request->validate([
-                'school' => 'required|string|max:255',
+                'staff_id' => 'required|exists:staff,id',
                 'leave_type' => 'required|in:sick,casual,annual,emergency,other',
                 'from_date' => 'required|date',
-                'to_date' => 'required|date|after_or_equal:from_date',
+                'to_date' => 'nullable|date|after_or_equal:from_date',
                 'total_days' => 'required|integer|min:1',
                 'reason' => 'required|string',
                 'coverage_plan' => 'required|string',
