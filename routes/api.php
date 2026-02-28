@@ -46,6 +46,7 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::post('/store', [StaffContractController::class, 'store'])->name('store');
             Route::get('/show/{id}', [StaffContractController::class, 'show'])->name('show');
             Route::put('/update/{id}', [StaffContractController::class, 'update'])->name('update');
+            Route::put('/update-status/{id}', [StaffContractController::class, 'updateStatus'])->name('update-status');
             Route::delete('/delete/{id}', [StaffContractController::class, 'destroy'])->name('delete');
             Route::post('/approve/{id}', [StaffContractController::class, 'approve'])->name('approve');
             Route::get('/expiring-soon/list', [StaffContractController::class, 'expiringSoon'])->name('expiring-soon');
@@ -79,6 +80,16 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/{jobApplication}', [JobApplicationController::class, 'show'])->name('show');
             Route::put('/{jobApplication}', [JobApplicationController::class, 'update'])->name('update');
             Route::delete('/{jobApplication}', [JobApplicationController::class, 'destroy'])->name('destroy');
+        });
+
+        // Jobs routes
+        Route::prefix('jobs')->name('jobs.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Api\JobController::class, 'index'])->name('index');
+            Route::post('/', [\App\Http\Controllers\Api\JobController::class, 'store'])->name('store');
+            Route::get('/{job}', [\App\Http\Controllers\Api\JobController::class, 'show'])->name('show');
+            Route::put('/{job}', [\App\Http\Controllers\Api\JobController::class, 'update'])->name('update');
+            Route::put('/{job}/status', [\App\Http\Controllers\Api\JobController::class, 'updateStatus'])->name('update-status');
+            Route::delete('/{job}', [\App\Http\Controllers\Api\JobController::class, 'destroy'])->name('destroy');
         });
 
         // Vendor routes
