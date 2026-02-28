@@ -11,12 +11,11 @@ return new class extends Migration
         Schema::create('attendances', function (Blueprint $table) {
             $table->id();
             $table->date('date');
-            $table->string('day');
             $table->foreignId('employee_id')->constrained('users');
             $table->enum('status', ['present', 'absent', 'late', 'half_day', 'leave']);
-            $table->time('expected_time');
             $table->time('arrived')->nullable();
             $table->time('check_out')->nullable();
+            $table->decimal('working_hours', 5, 2)->nullable();
             $table->boolean('left_without_notice')->default(false);
             $table->text('notes')->nullable();
             $table->foreignId('recorded_by')->constrained('users');

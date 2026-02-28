@@ -21,6 +21,7 @@ class StaffContract extends Model
         'probation_status',
         'salary',
         'allowances',
+        'expected_time',
         'benefits',
         'job_description',
         'terms_conditions',
@@ -41,6 +42,7 @@ class StaffContract extends Model
         'renewal_alert_date' => 'date',
         'salary' => 'decimal:2',
         'allowances' => 'array',
+        'expected_time' => 'string',
         'benefits' => 'array',
         'renewal_alert_sent' => 'boolean',
     ];
