@@ -20,6 +20,7 @@ return new class extends Migration
             $table->enum('probation_status', ['pending', 'passed', 'failed', 'extended'])->nullable();
             $table->decimal('salary', 12, 2);
             $table->json('allowances')->nullable();
+            $table->time('expected_time');
             $table->json('benefits')->nullable();
             $table->text('job_description')->nullable();
             $table->text('terms_conditions')->nullable();

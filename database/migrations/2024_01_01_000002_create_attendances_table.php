@@ -14,7 +14,6 @@ return new class extends Migration
             $table->string('day');
             $table->foreignId('employee_id')->constrained('users');
             $table->enum('status', ['present', 'absent', 'late', 'half_day', 'leave']);
-            $table->time('expected_time');
             $table->time('arrived')->nullable();
             $table->time('check_out')->nullable();
             $table->boolean('left_without_notice')->default(false);
