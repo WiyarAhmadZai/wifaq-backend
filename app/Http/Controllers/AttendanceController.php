@@ -19,7 +19,6 @@ class AttendanceController extends Controller
             'day' => 'required|string',
             'employee_id' => 'required|exists:users,id',
             'status' => 'required|in:present,absent,late,half_day,leave',
-            'expected_time' => 'required',
             'arrived' => 'nullable',
             'check_out' => 'nullable',
             'left_without_notice' => 'boolean',
@@ -43,7 +42,6 @@ class AttendanceController extends Controller
             'day' => 'required|string',
             'employee_id' => 'required|exists:users,id',
             'status' => 'required|in:present,absent,late,half_day,leave',
-            'expected_time' => 'required',
             'arrived' => 'nullable',
             'check_out' => 'nullable',
             'left_without_notice' => 'boolean',
@@ -73,7 +71,6 @@ class AttendanceController extends Controller
             [
                 'day' => now()->format('l'),
                 'status' => 'present',
-                'expected_time' => '08:00',
                 'arrived' => now()->format('H:i'),
                 'recorded_by' => auth()->id(),
             ]

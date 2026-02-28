@@ -15,7 +15,6 @@ class Attendance extends Model
         'day',
         'employee_id',
         'status',
-        'expected_time',
         'arrived',
         'check_out',
         'left_without_notice',
