@@ -10,11 +10,10 @@ return new class extends Migration
     {
         Schema::create('leave_requests', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained('users');
-            $table->string('school');
+            $table->unsignedBigInteger('staff_id');
             $table->enum('leave_type', ['sick', 'casual', 'annual', 'emergency', 'other']);
             $table->date('from_date');
-            $table->date('to_date');
+            $table->date('to_date')->nullable();
             $table->integer('total_days');
             $table->text('reason');
             $table->text('coverage_plan');
