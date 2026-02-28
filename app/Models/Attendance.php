@@ -16,6 +16,7 @@ class Attendance extends Model
         'status',
         'arrived',
         'check_out',
+        'working_hours',
         'left_without_notice',
         'notes',
         'recorded_by',
