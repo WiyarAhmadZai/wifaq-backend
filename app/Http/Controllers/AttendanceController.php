@@ -16,7 +16,6 @@ class AttendanceController extends Controller
     {
         $validated = $request->validate([
             'date' => 'required|date',
-            'day' => 'required|string',
             'employee_id' => 'required|exists:users,id',
             'status' => 'required|in:present,absent,late,half_day,leave',
             'arrived' => 'nullable',
@@ -39,7 +38,6 @@ class AttendanceController extends Controller
     {
         $validated = $request->validate([
             'date' => 'required|date',
-            'day' => 'required|string',
             'employee_id' => 'required|exists:users,id',
             'status' => 'required|in:present,absent,late,half_day,leave',
             'arrived' => 'nullable',
@@ -69,7 +67,6 @@ class AttendanceController extends Controller
         $attendance = Attendance::firstOrCreate(
             ['employee_id' => $validated['employee_id'], 'date' => $today],
             [
-                'day' => now()->format('l'),
                 'status' => 'present',
                 'arrived' => now()->format('H:i'),
                 'recorded_by' => auth()->id(),
