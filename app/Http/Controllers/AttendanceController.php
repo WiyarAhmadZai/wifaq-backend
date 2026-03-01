@@ -13,6 +13,11 @@ class AttendanceController extends Controller
     {
         $query = Attendance::with(['employee', 'recorder']);
         
+        // Filter by specific date
+        if ($request->has('date')) {
+            $query->where('date', $request->date);
+        }
+        
         // Filter by date range
         if ($request->has('from_date')) {
             $query->where('date', '>=', $request->from_date);
