@@ -37,7 +37,7 @@ class AttendanceController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'date' => 'required|date',
-            'employee_id' => 'required|exists:users,id',
+            'employee_id' => 'required|exists:staff,id',
             'status' => 'required|in:present,absent,late,half_day,leave',
             'arrived' => 'nullable|date_format:H:i',
             'check_out' => 'nullable|date_format:H:i|after_or_equal:arrived',
@@ -94,7 +94,7 @@ class AttendanceController extends Controller
 
         $validator = Validator::make($request->all(), [
             'date' => 'sometimes|date',
-            'employee_id' => 'sometimes|exists:users,id',
+            'employee_id' => 'sometimes|exists:staff,id',
             'status' => 'sometimes|in:present,absent,late,half_day,leave',
             'arrived' => 'nullable|date_format:H:i',
             'check_out' => 'nullable|date_format:H:i|after_or_equal:arrived',
@@ -139,7 +139,7 @@ class AttendanceController extends Controller
     public function checkIn(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|exists:users,id',
+            'employee_id' => 'required|exists:staff,id',
         ]);
 
         if ($validator->fails()) {
@@ -179,6 +179,8 @@ class AttendanceController extends Controller
             ]);
         }
 
+        $attendance->refresh();
+
         return response()->json([
             'message' => 'Check-in successful',
             'attendance' => $attendance->load(['employee', 'recorder'])
@@ -191,7 +193,7 @@ class AttendanceController extends Controller
     public function checkOut(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|exists:users,id',
+            'employee_id' => 'required|exists:staff,id',
         ]);
 
         if ($validator->fails()) {
@@ -236,9 +238,12 @@ class AttendanceController extends Controller
             'recorded_by' => auth()->id(),
         ]);
 
+        $attendance->refresh();
+        $attendance->load(['employee', 'recorder']);
+
         return response()->json([
             'message' => 'Check-out successful',
-            'attendance' => $attendance->load(['employee', 'recorder']),
+            'attendance' => $attendance,
             'working_hours' => $workingHours
         ]);
     }
@@ -249,7 +254,7 @@ class AttendanceController extends Controller
     public function todayStatus(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|exists:users,id',
+            'employee_id' => 'required|exists:staff,id',
         ]);
 
         if ($validator->fails()) {
@@ -280,7 +285,7 @@ class AttendanceController extends Controller
         $validator = Validator::make($request->all(), [
             'from_date' => 'required|date',
             'to_date' => 'required|date|after_or_equal:from_date',
-            'employee_id' => 'nullable|exists:users,id',
+            'employee_id' => 'nullable|exists:staff,id',
         ]);
 
         if ($validator->fails()) {
