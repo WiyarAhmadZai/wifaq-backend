@@ -39,7 +39,7 @@ class LeaveRequestController extends Controller
                 'from_date' => 'required|date',
                 'to_date' => 'nullable|date|after_or_equal:from_date',
                 'total_days' => 'required|integer|min:1',
-                'reason' => 'required|string',
+                'reason' => 'required_if:leave_type,other|nullable',
                 'coverage_plan' => 'required|string',
             ]);
 
@@ -83,7 +83,7 @@ class LeaveRequestController extends Controller
                 'from_date' => 'required|date',
                 'to_date' => 'nullable|date|after_or_equal:from_date',
                 'total_days' => 'required|integer|min:1',
-                'reason' => 'required|string',
+                'reason' => 'required_if:leave_type,other|string',
                 'coverage_plan' => 'required|string',
                 'status' => 'in:pending,approved,rejected',
             ]);
