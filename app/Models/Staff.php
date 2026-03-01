@@ -58,4 +58,9 @@ class Staff extends Model
     {
         return $this->belongsTo(\App\Models\User::class, 'updated_by');
     }
+
+    public function attendances()
+    {
+        return $this->hasMany(Attendance::class, 'employee_id');
+    }
 }
