@@ -192,60 +192,68 @@ class AttendanceController extends Controller
      */
     public function checkOut(Request $request)
     {
-        $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|exists:staff,id',
-        ]);
+        try {
+            $validator = Validator::make($request->all(), [
+                'employee_id' => 'required|exists:staff,id',
+            ]);
 
-        if ($validator->fails()) {
-            return response()->json(['errors' => $validator->errors()], 422);
-        }
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
 
-        $today = now()->toDateString();
-        $employeeId = $request->employee_id;
-        
-        // Find today's attendance record
-        $attendance = Attendance::where('employee_id', $employeeId)
-            ->where('date', $today)
-            ->first();
+            $today = now()->toDateString();
+            $employeeId = $request->employee_id;
             
-        if (!$attendance) {
+            // Find today's attendance record
+            $attendance = Attendance::where('employee_id', $employeeId)
+                ->where('date', $today)
+                ->first();
+                
+            if (!$attendance) {
+                return response()->json([
+                    'error' => 'No check-in record found for today. Please check in first.'
+                ], 422);
+            }
+            
+            // Check if already checked out
+            if ($attendance->check_out) {
+                return response()->json([
+                    'error' => 'Already checked out today',
+                    'attendance' => $attendance
+                ], 422);
+            }
+            
+            // Check if checked in
+            if (!$attendance->arrived) {
+                return response()->json([
+                    'error' => 'No check-in record found. Please check in first.'
+                ], 422);
+            }
+
+            $checkOutTime = now()->format('H:i');
+            $workingHours = $this->calculateWorkingHours($attendance->arrived, $checkOutTime);
+
+            $attendance->update([
+                'check_out' => $checkOutTime,
+                'working_hours' => $workingHours,
+                'recorded_by' => auth()->id(),
+            ]);
+
+            $attendance->refresh();
+            $attendance->load(['employee', 'recorder']);
+
             return response()->json([
-                'error' => 'No check-in record found for today. Please check in first.'
-            ], 422);
-        }
-        
-        // Check if already checked out
-        if ($attendance->check_out) {
+                'message' => 'Check-out successful',
+                'attendance' => $attendance,
+                'working_hours' => $workingHours
+            ]);
+        } catch (\Exception $e) {
             return response()->json([
-                'error' => 'Already checked out today',
-                'attendance' => $attendance
-            ], 422);
+                'error' => 'Check-out failed: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
         }
-        
-        // Check if checked in
-        if (!$attendance->arrived) {
-            return response()->json([
-                'error' => 'No check-in record found. Please check in first.'
-            ], 422);
-        }
-
-        $checkOutTime = now()->format('H:i');
-        $workingHours = $this->calculateWorkingHours($attendance->arrived, $checkOutTime);
-
-        $attendance->update([
-            'check_out' => $checkOutTime,
-            'working_hours' => $workingHours,
-            'recorded_by' => auth()->id(),
-        ]);
-
-        $attendance->refresh();
-        $attendance->load(['employee', 'recorder']);
-
-        return response()->json([
-            'message' => 'Check-out successful',
-            'attendance' => $attendance,
-            'working_hours' => $workingHours
-        ]);
     }
 
     /**
@@ -323,8 +331,12 @@ class AttendanceController extends Controller
      */
     private function calculateWorkingHours($arrived, $checkOut)
     {
-        $start = \Carbon\Carbon::createFromFormat('H:i', $arrived);
-        $end = \Carbon\Carbon::createFromFormat('H:i', $checkOut);
+        // Handle both H:i format and full datetime strings
+        $arrivedTime = substr($arrived, 0, 5); // Extract HH:MM from "HH:MM:SS" or "YYYY-MM-DD HH:MM:SS"
+        $checkOutTime = substr($checkOut, 0, 5);
+        
+        $start = \Carbon\Carbon::createFromFormat('H:i', $arrivedTime);
+        $end = \Carbon\Carbon::createFromFormat('H:i', $checkOutTime);
         
         $diffInMinutes = $start->diffInMinutes($end);
         return round($diffInMinutes / 60, 2); // Return hours with 2 decimal places
