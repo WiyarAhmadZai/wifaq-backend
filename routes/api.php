@@ -57,6 +57,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::prefix('attendances')->name('attendances.')->group(function () {
             Route::get('/', [AttendanceController::class, 'index'])->name('index');
             Route::post('/', [AttendanceController::class, 'store'])->name('store');
+            Route::get('/daily-sheet', [AttendanceController::class, 'dailySheet'])->name('daily-sheet');
             Route::get('/today-status', [AttendanceController::class, 'todayStatus'])->name('today-status');
             Route::get('/report', [AttendanceController::class, 'report'])->name('report');
             Route::get('/{attendance}', [AttendanceController::class, 'show'])->name('show');

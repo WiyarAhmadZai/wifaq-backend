@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -60,16 +61,36 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        $data = $request->all();
-        $data['recorded_by'] = auth()->id();
-        
-        // Calculate working hours if both times are present
-        if ($data['arrived'] && $data['check_out']) {
-            $data['working_hours'] = $this->calculateWorkingHours($data['arrived'], $data['check_out']);
+        $recordedBy = auth()->id();
+        if ($recordedBy === null) {
+            return response()->json(['error' => 'Unauthenticated. Please log in to record attendance.'], 401);
         }
 
-        $attendance = Attendance::create($data);
-        
+        $data = array_intersect_key($request->only([
+            'date', 'employee_id', 'status', 'arrived', 'check_out', 'left_without_notice', 'notes'
+        ]), array_flip((new Attendance())->getFillable()));
+        $data['recorded_by'] = $recordedBy;
+
+        // Only set times when present; for absent leave null
+        $arrived = isset($data['arrived']) && $data['arrived'] !== '' ? $data['arrived'] : null;
+        $checkOut = isset($data['check_out']) && $data['check_out'] !== '' ? $data['check_out'] : null;
+        $data['arrived'] = $arrived;
+        $data['check_out'] = $checkOut;
+
+        if ($arrived && $checkOut) {
+            $data['working_hours'] = $this->calculateWorkingHours($arrived, $checkOut);
+        }
+
+        try {
+            $attendance = Attendance::create($data);
+        } catch (\Illuminate\Database\QueryException $e) {
+            $message = 'Failed to save attendance.';
+            if (str_contains($e->getMessage(), 'foreign key') || str_contains($e->getMessage(), 'recorded_by')) {
+                $message = 'Invalid user or employee. Please ensure you are logged in and the employee exists.';
+            }
+            return response()->json(['error' => $message], 422);
+        }
+
         return response()->json($attendance->load(['employee', 'recorder']), 201);
     }
 
@@ -254,6 +275,65 @@ class AttendanceController extends Controller
                 'line' => $e->getLine()
             ], 500);
         }
+    }
+
+    /**
+     * Get daily sheet: all staff for a given date with their attendance or "pending".
+     * No record + no check-in = pending (not counted as absent). Only explicit mark = absent.
+     */
+    public function dailySheet(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'date' => 'required|date',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['errors' => $validator->errors()], 422);
+        }
+
+        $date = $request->date;
+        $staff = Staff::orderBy('full_name')->get();
+        $attendances = Attendance::where('date', $date)
+            ->with(['employee', 'recorder'])
+            ->get()
+            ->keyBy('employee_id');
+
+        $rows = $staff->map(function ($employee, $index) use ($attendances, $date) {
+            $attendance = $attendances->get($employee->id);
+            $status = $attendance ? $attendance->status : 'pending';
+            return [
+                'index' => $index + 1,
+                'employee' => [
+                    'id' => $employee->id,
+                    'full_name' => $employee->full_name,
+                    'employee_id' => $employee->employee_id,
+                    'department' => $employee->department,
+                    'initials' => $this->getInitials($employee->full_name),
+                ],
+                'attendance_id' => $attendance?->id,
+                'status' => $status,
+                'arrived' => $attendance?->arrived ? substr($attendance->arrived, 0, 5) : null,
+                'check_out' => $attendance?->check_out ? substr($attendance->check_out, 0, 5) : null,
+                'working_hours' => $attendance?->working_hours,
+            ];
+        });
+
+        return response()->json([
+            'date' => $date,
+            'rows' => $rows,
+        ]);
+    }
+
+    private function getInitials($fullName)
+    {
+        $parts = array_filter(explode(' ', trim($fullName)));
+        if (empty($parts)) {
+            return '?';
+        }
+        if (count($parts) === 1) {
+            return strtoupper(substr($parts[0], 0, 2));
+        }
+        return strtoupper(substr($parts[0], 0, 1) . substr(end($parts), 0, 1));
     }
 
     /**
