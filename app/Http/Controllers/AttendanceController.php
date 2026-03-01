@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Attendance;
+use App\Models\Staff;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 
@@ -11,6 +12,11 @@ class AttendanceController extends Controller
     public function index(Request $request)
     {
         $query = Attendance::with(['employee', 'recorder']);
+        
+        // Filter by specific date
+        if ($request->has('date')) {
+            $query->where('date', $request->date);
+        }
         
         // Filter by date range
         if ($request->has('from_date')) {
@@ -37,7 +43,7 @@ class AttendanceController extends Controller
     {
         $validator = Validator::make($request->all(), [
             'date' => 'required|date',
-            'employee_id' => 'required|exists:users,id',
+            'employee_id' => 'required|exists:staff,id',
             'status' => 'required|in:present,absent,late,half_day,leave',
             'arrived' => 'nullable|date_format:H:i',
             'check_out' => 'nullable|date_format:H:i|after_or_equal:arrived',
@@ -60,16 +66,42 @@ class AttendanceController extends Controller
             ], 422);
         }
 
-        $data = $request->all();
-        $data['recorded_by'] = auth()->id();
-        
-        // Calculate working hours if both times are present
-        if ($data['arrived'] && $data['check_out']) {
-            $data['working_hours'] = $this->calculateWorkingHours($data['arrived'], $data['check_out']);
+        if ($this->hasQuickLimitReachedForDate($request->date)) {
+            return response()->json([
+                'error' => 'You have already completed one check-in and check-out for this date. You do not have permission to record more attendance on the quick page.',
+            ], 403);
         }
 
-        $attendance = Attendance::create($data);
-        
+        $recordedBy = auth()->id();
+        if ($recordedBy === null) {
+            return response()->json(['error' => 'Unauthenticated. Please log in to record attendance.'], 401);
+        }
+
+        $data = array_intersect_key($request->only([
+            'date', 'employee_id', 'status', 'arrived', 'check_out', 'left_without_notice', 'notes'
+        ]), array_flip((new Attendance())->getFillable()));
+        $data['recorded_by'] = $recordedBy;
+
+        // Only set times when present; for absent leave null
+        $arrived = isset($data['arrived']) && $data['arrived'] !== '' ? $data['arrived'] : null;
+        $checkOut = isset($data['check_out']) && $data['check_out'] !== '' ? $data['check_out'] : null;
+        $data['arrived'] = $arrived;
+        $data['check_out'] = $checkOut;
+
+        if ($arrived && $checkOut) {
+            $data['working_hours'] = $this->calculateWorkingHours($arrived, $checkOut);
+        }
+
+        try {
+            $attendance = Attendance::create($data);
+        } catch (\Illuminate\Database\QueryException $e) {
+            $message = 'Failed to save attendance.';
+            if (str_contains($e->getMessage(), 'foreign key') || str_contains($e->getMessage(), 'recorded_by')) {
+                $message = 'Invalid user or employee. Please ensure you are logged in and the employee exists.';
+            }
+            return response()->json(['error' => $message], 422);
+        }
+
         return response()->json($attendance->load(['employee', 'recorder']), 201);
     }
 
@@ -92,9 +124,16 @@ class AttendanceController extends Controller
             return response()->json(['message' => 'Attendance not found'], 404);
         }
 
+        // Once this staff has both Time In and Time Out, no further changes allowed for that staff on that day
+        if ($attendance->arrived && $attendance->check_out) {
+            return response()->json([
+                'error' => 'This staff has already completed check-in and check-out for this day. No further changes are allowed for this record.',
+            ], 403);
+        }
+
         $validator = Validator::make($request->all(), [
             'date' => 'sometimes|date',
-            'employee_id' => 'sometimes|exists:users,id',
+            'employee_id' => 'sometimes|exists:staff,id',
             'status' => 'sometimes|in:present,absent,late,half_day,leave',
             'arrived' => 'nullable|date_format:H:i',
             'check_out' => 'nullable|date_format:H:i|after_or_equal:arrived',
@@ -139,7 +178,7 @@ class AttendanceController extends Controller
     public function checkIn(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|exists:users,id',
+            'employee_id' => 'required|exists:staff,id',
         ]);
 
         if ($validator->fails()) {
@@ -147,6 +186,11 @@ class AttendanceController extends Controller
         }
 
         $today = now()->toDateString();
+        if ($this->hasQuickLimitReachedForDate($today)) {
+            return response()->json([
+                'error' => 'You have already completed one check-in and check-out for today. You do not have permission to record more attendance on the quick page.',
+            ], 403);
+        }
         $employeeId = $request->employee_id;
         
         // Check if already checked in today
@@ -179,6 +223,8 @@ class AttendanceController extends Controller
             ]);
         }
 
+        $attendance->refresh();
+
         return response()->json([
             'message' => 'Check-in successful',
             'attendance' => $attendance->load(['employee', 'recorder'])
@@ -190,57 +236,152 @@ class AttendanceController extends Controller
      */
     public function checkOut(Request $request)
     {
+        try {
+            $validator = Validator::make($request->all(), [
+                'employee_id' => 'required|exists:staff,id',
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json(['errors' => $validator->errors()], 422);
+            }
+
+            $today = now()->toDateString();
+            $employeeId = $request->employee_id;
+            
+            // Find today's attendance record
+            $attendance = Attendance::where('employee_id', $employeeId)
+                ->where('date', $today)
+                ->first();
+                
+            if (!$attendance) {
+                return response()->json([
+                    'error' => 'No check-in record found for today. Please check in first.'
+                ], 422);
+            }
+            
+            // Check if already checked out
+            if ($attendance->check_out) {
+                return response()->json([
+                    'error' => 'Already checked out today',
+                    'attendance' => $attendance
+                ], 422);
+            }
+            
+            // Check if checked in
+            if (!$attendance->arrived) {
+                return response()->json([
+                    'error' => 'No check-in record found. Please check in first.'
+                ], 422);
+            }
+
+            $checkOutTime = now()->format('H:i');
+            $workingHours = $this->calculateWorkingHours($attendance->arrived, $checkOutTime);
+
+            $attendance->update([
+                'check_out' => $checkOutTime,
+                'working_hours' => $workingHours,
+                'recorded_by' => auth()->id(),
+            ]);
+
+            $attendance->refresh();
+            $attendance->load(['employee', 'recorder']);
+
+            return response()->json([
+                'message' => 'Check-out successful',
+                'attendance' => $attendance,
+                'working_hours' => $workingHours
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Check-out failed: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get daily sheet: all staff for a given date with their attendance or "pending".
+     * No record + no check-in = pending (not counted as absent). Only explicit mark = absent.
+     */
+    public function dailySheet(Request $request)
+    {
         $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|exists:users,id',
+            'date' => 'required|date',
         ]);
 
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
 
-        $today = now()->toDateString();
-        $employeeId = $request->employee_id;
-        
-        // Find today's attendance record
-        $attendance = Attendance::where('employee_id', $employeeId)
-            ->where('date', $today)
-            ->first();
-            
-        if (!$attendance) {
-            return response()->json([
-                'error' => 'No check-in record found for today. Please check in first.'
-            ], 422);
-        }
-        
-        // Check if already checked out
-        if ($attendance->check_out) {
-            return response()->json([
-                'error' => 'Already checked out today',
-                'attendance' => $attendance
-            ], 422);
-        }
-        
-        // Check if checked in
-        if (!$attendance->arrived) {
-            return response()->json([
-                'error' => 'No check-in record found. Please check in first.'
-            ], 422);
-        }
+        $date = $request->date;
+        $staff = Staff::orderBy('full_name')->get();
+        $attendances = Attendance::where('date', $date)
+            ->with(['employee', 'recorder'])
+            ->get()
+            ->keyBy('employee_id');
 
-        $checkOutTime = now()->format('H:i');
-        $workingHours = $this->calculateWorkingHours($attendance->arrived, $checkOutTime);
+        // Restriction: once current user has completed one full cycle (check-in + check-out) for this date, no more quick actions
+        $currentUserId = auth()->id();
+        $quickLimitReached = $currentUserId && Attendance::where('date', $date)
+            ->where('recorded_by', $currentUserId)
+            ->whereNotNull('arrived')
+            ->whereNotNull('check_out')
+            ->exists();
 
-        $attendance->update([
-            'check_out' => $checkOutTime,
-            'working_hours' => $workingHours,
-            'recorded_by' => auth()->id(),
-        ]);
+        $rows = $staff->map(function ($employee, $index) use ($attendances, $date) {
+            $attendance = $attendances->get($employee->id);
+            $status = $attendance ? $attendance->status : 'pending';
+            return [
+                'index' => $index + 1,
+                'employee' => [
+                    'id' => $employee->id,
+                    'full_name' => $employee->full_name,
+                    'employee_id' => $employee->employee_id,
+                    'department' => $employee->department,
+                    'initials' => $this->getInitials($employee->full_name),
+                ],
+                'attendance_id' => $attendance?->id,
+                'status' => $status,
+                'arrived' => $attendance?->arrived ? substr($attendance->arrived, 0, 5) : null,
+                'check_out' => $attendance?->check_out ? substr($attendance->check_out, 0, 5) : null,
+                'working_hours' => $attendance?->working_hours,
+            ];
+        });
 
         return response()->json([
-            'message' => 'Check-out successful',
-            'attendance' => $attendance->load(['employee', 'recorder']),
-            'working_hours' => $workingHours
+            'date' => $date,
+            'rows' => $rows,
+            'quick_limit_reached' => $quickLimitReached,
         ]);
+    }
+
+    /**
+     * Check if current user has already completed one full cycle (one attendance with both in & out) for the date.
+     */
+    private function hasQuickLimitReachedForDate($date): bool
+    {
+        $userId = auth()->id();
+        if (!$userId) {
+            return false;
+        }
+        return Attendance::where('date', $date)
+            ->where('recorded_by', $userId)
+            ->whereNotNull('arrived')
+            ->whereNotNull('check_out')
+            ->exists();
+    }
+
+    private function getInitials($fullName)
+    {
+        $parts = array_filter(explode(' ', trim($fullName)));
+        if (empty($parts)) {
+            return '?';
+        }
+        if (count($parts) === 1) {
+            return strtoupper(substr($parts[0], 0, 2));
+        }
+        return strtoupper(substr($parts[0], 0, 1) . substr(end($parts), 0, 1));
     }
 
     /**
@@ -249,7 +390,7 @@ class AttendanceController extends Controller
     public function todayStatus(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'employee_id' => 'required|exists:users,id',
+            'employee_id' => 'required|exists:staff,id',
         ]);
 
         if ($validator->fails()) {
@@ -280,7 +421,7 @@ class AttendanceController extends Controller
         $validator = Validator::make($request->all(), [
             'from_date' => 'required|date',
             'to_date' => 'required|date|after_or_equal:from_date',
-            'employee_id' => 'nullable|exists:users,id',
+            'employee_id' => 'nullable|exists:staff,id',
         ]);
 
         if ($validator->fails()) {
@@ -318,8 +459,12 @@ class AttendanceController extends Controller
      */
     private function calculateWorkingHours($arrived, $checkOut)
     {
-        $start = \Carbon\Carbon::createFromFormat('H:i', $arrived);
-        $end = \Carbon\Carbon::createFromFormat('H:i', $checkOut);
+        // Handle both H:i format and full datetime strings
+        $arrivedTime = substr($arrived, 0, 5); // Extract HH:MM from "HH:MM:SS" or "YYYY-MM-DD HH:MM:SS"
+        $checkOutTime = substr($checkOut, 0, 5);
+        
+        $start = \Carbon\Carbon::createFromFormat('H:i', $arrivedTime);
+        $end = \Carbon\Carbon::createFromFormat('H:i', $checkOutTime);
         
         $diffInMinutes = $start->diffInMinutes($end);
         return round($diffInMinutes / 60, 2); // Return hours with 2 decimal places
