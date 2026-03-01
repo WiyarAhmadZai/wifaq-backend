@@ -61,6 +61,12 @@ class AttendanceController extends Controller
             ], 422);
         }
 
+        if ($this->hasQuickLimitReachedForDate($request->date)) {
+            return response()->json([
+                'error' => 'You have already completed one check-in and check-out for this date. You do not have permission to record more attendance on the quick page.',
+            ], 403);
+        }
+
         $recordedBy = auth()->id();
         if ($recordedBy === null) {
             return response()->json(['error' => 'Unauthenticated. Please log in to record attendance.'], 401);
@@ -111,6 +117,13 @@ class AttendanceController extends Controller
         
         if (!$attendance) {
             return response()->json(['message' => 'Attendance not found'], 404);
+        }
+
+        // Once this staff has both Time In and Time Out, no further changes allowed for that staff on that day
+        if ($attendance->arrived && $attendance->check_out) {
+            return response()->json([
+                'error' => 'This staff has already completed check-in and check-out for this day. No further changes are allowed for this record.',
+            ], 403);
         }
 
         $validator = Validator::make($request->all(), [
@@ -168,6 +181,11 @@ class AttendanceController extends Controller
         }
 
         $today = now()->toDateString();
+        if ($this->hasQuickLimitReachedForDate($today)) {
+            return response()->json([
+                'error' => 'You have already completed one check-in and check-out for today. You do not have permission to record more attendance on the quick page.',
+            ], 403);
+        }
         $employeeId = $request->employee_id;
         
         // Check if already checked in today
@@ -298,6 +316,14 @@ class AttendanceController extends Controller
             ->get()
             ->keyBy('employee_id');
 
+        // Restriction: once current user has completed one full cycle (check-in + check-out) for this date, no more quick actions
+        $currentUserId = auth()->id();
+        $quickLimitReached = $currentUserId && Attendance::where('date', $date)
+            ->where('recorded_by', $currentUserId)
+            ->whereNotNull('arrived')
+            ->whereNotNull('check_out')
+            ->exists();
+
         $rows = $staff->map(function ($employee, $index) use ($attendances, $date) {
             $attendance = $attendances->get($employee->id);
             $status = $attendance ? $attendance->status : 'pending';
@@ -321,7 +347,24 @@ class AttendanceController extends Controller
         return response()->json([
             'date' => $date,
             'rows' => $rows,
+            'quick_limit_reached' => $quickLimitReached,
         ]);
+    }
+
+    /**
+     * Check if current user has already completed one full cycle (one attendance with both in & out) for the date.
+     */
+    private function hasQuickLimitReachedForDate($date): bool
+    {
+        $userId = auth()->id();
+        if (!$userId) {
+            return false;
+        }
+        return Attendance::where('date', $date)
+            ->where('recorded_by', $userId)
+            ->whereNotNull('arrived')
+            ->whereNotNull('check_out')
+            ->exists();
     }
 
     private function getInitials($fullName)
